@@ -1,0 +1,11 @@
+# vcstool マニフェスト（共通依存）
+# 複数システムで再利用する共通リポジトリをここに宣言する。
+# 当面は空。再利用ノードが切り出された段階で追記する。
+#
+# 例:
+# repositories:
+#   ros2_common_nodes:
+#     type: git
+#     url: https://github.com/demitas1/ros2_common_nodes.git
+#     version: main          # 再現性のため tag / commit 固定を推奨
+repositories:

@@ -1,0 +1,32 @@
+# 方式B: 本番配布（システムイメージを焼いて Pi が pull）
+#
+# CI（GitHub Actions）でこのファイルの build を実行し、システムイメージを
+# ghcr に push する（CI 構築は issue #1）。Pi 側は pull して起動するだけ:
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+# arm64 実機ビルドは重いため、ビルドは CI に寄せ Pi では行わない。
+#
+# 開発中デプロイ（ソースをマウントしてコンテナ内ビルド）は docker-compose.yml（方式A）。
+services:
+  system:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/demitas1/rpi4_ros2_system_bobtail:latest   # CI の push 先 / Pi の pull 元（運用時 tag 固定）
+    container_name: rpi4_ros2_system_bobtail
+    network_mode: host
+    shm_size: 1gb
+    restart: unless-stopped
+    volumes:
+      - /dev/shm:/dev/shm
+    environment:
+      - ROS_DOMAIN_ID=42
+    working_dir: /home/ros2_user/ros2_ws
+    # 実システムでは bringup の launch に差し替える:
+    #   ros2 launch bobtail_bringup bobtail.launch.py
+    # 雛形サンプルには launch / bringup が無いため、サンプルの talker を起動する
+    # プレースホルダにしている。
+    command:
+      - bash
+      - -lc
+      - source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 run bobtail_pubsub bobtail_talker

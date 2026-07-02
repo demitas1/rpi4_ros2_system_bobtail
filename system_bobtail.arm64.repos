@@ -1,0 +1,11 @@
+# vcstool マニフェスト（arm64 追加依存）
+# arm64 でのみ使用する共通リポジトリをここに宣言する。
+# arm64 機では system_bobtail.repos に加えて本ファイルも vcs import する。
+#
+# 例:
+# repositories:
+#   ros2_arm64_nodes:
+#     type: git
+#     url: https://github.com/demitas1/ros2_arm64_nodes.git
+#     version: main
+repositories:

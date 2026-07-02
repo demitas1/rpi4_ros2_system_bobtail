@@ -1,0 +1,30 @@
+# 方式A: 開発中デプロイ（ノード開発者向け）
+#
+# ベースイメージ ghcr.io/demitas1/ros2_jazzy を pull するだけで動作する。
+# 基盤リポジトリ rpi4_ros の clone は不要（依存はこのイメージのみ）。
+# 本リポを clone して `docker compose up -d` → `docker compose exec dev bash`
+# でコンテナに入り、ソースからビルドする。手順は docs/deployment.md（方式A）。
+#
+# 本番配布（システムイメージを焼いて Pi が pull）は docker-compose.prod.yml（方式B）。
+services:
+  dev:
+    image: ghcr.io/demitas1/ros2_jazzy:latest   # 運用時は :latest ではなく tag 固定を推奨
+    container_name: rpi4_ros2_system_bobtail_dev
+    network_mode: host
+    shm_size: 1gb
+    volumes:
+      - /dev/shm:/dev/shm
+      # 本リポをワークスペースの src 配下にマウント（実機デプロイ時のレイアウトと一致）
+      - .:/home/ros2_user/ros2_ws/src/rpi4_ros2_system_bobtail
+      # ワークスペースを名前付きボリュームに永続化し、build/install/log を残して
+      # 再ビルドを高速化する（ホストの作業ツリーは汚さない）。
+      - ros2_ws:/home/ros2_user/ros2_ws
+    environment:
+      - ROS_DOMAIN_ID=42
+    working_dir: /home/ros2_user/ros2_ws
+    stdin_open: true
+    tty: true
+    command: ["bash"]
+
+volumes:
+  ros2_ws:
