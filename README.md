@@ -17,7 +17,8 @@ ROS2 システム **bobtail** のノード管理リポジトリ。
 
 ```
 rpi4_ros2_system_bobtail/
-├── src/                        システム固有の ament パッケージ群
+├── src/                        システム固有の ament パッケージ群（コンテナ内で colcon ビルド）
+├── host/                       ホスト側（コンテナ外）で直接動くプログラム（GPIO/I2C/SPI/PWM。colcon 非対象）
 ├── system_bobtail.repos        共通依存（vcstool マニフェスト。当面は空 or 最小）
 ├── system_bobtail.arm64.repos  arm64 追加依存（あれば）
 ├── docker-compose.yml          方式A: 開発中デプロイ（ベースイメージにソースをマウント）
@@ -25,6 +26,10 @@ rpi4_ros2_system_bobtail/
 ├── Dockerfile                  本番イメージ用（方式B。FROM ghcr ベースイメージ）
 └── docs/                       ドキュメント
 ```
+
+> `host/` は ROS2 コンテナとは分離した Pi ホストネイティブのプログラム
+> （[`host/README.md`](host/README.md)）。ビルド環境は
+> [`docs/pi4_host_toolchain_setup.md`](docs/pi4_host_toolchain_setup.md) を参照。
 
 現在 `src/bobtail_pubsub`（talker/listener）を参照実装として同梱している。実ノードの
 追加に伴い順次差し替える。

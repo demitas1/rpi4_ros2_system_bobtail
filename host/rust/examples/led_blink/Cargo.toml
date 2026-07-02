@@ -1,0 +1,9 @@
+[package]
+name = "led_blink"
+version = "0.1.0"
+edition = "2021"
+description = "GPIO LED 点滅 example (rppal). ホスト側でネイティブ実行する。"
+
+[dependencies]
+rppal = "0.19"   # Raspberry Pi 用 GPIO/I2C/SPI/PWM クレート
+ctrlc = "3"      # Ctrl-C を捕捉してラインをクリーンに解放する

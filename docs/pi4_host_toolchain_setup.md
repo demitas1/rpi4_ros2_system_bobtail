@@ -119,6 +119,30 @@ cargo    /home/demitas/.cargo/bin/cargo   (1.96.1 stable)
 rustup   /home/demitas/.cargo/bin/rustup
 ```
 
+## 5. GPIO / I2C / SPI ライブラリ（ホスト側プログラム用）
+
+`host/`（コンテナ外で動くプログラム。[`../host/README.md`](../host/README.md)）が GPIO/I2C/SPI/PWM を
+直接操作するためのライブラリ。GPIO はキャラクタデバイス `/dev/gpiochip0`（`pinctrl-bcm2711`）を使う
+（旧 sysfs `/sys/class/gpio` は kernel 6.x で廃止）。実行ユーザーが `gpio`/`i2c`/`spi` グループに
+所属していれば **sudo 不要**。
+
+```bash
+# C++（libgpiod v2 の C API をリンク）: 開発ヘッダ
+ssh rpi4-wifi 'sudo apt-get install -y libgpiod-dev'
+# I2C デバイス確認ツール（i2cdetect 等。周辺センサ追加時に）
+ssh rpi4-wifi 'sudo apt-get install -y i2c-tools'
+```
+
+- **C++**: `libgpiod-dev`（`libgpiod.pc` を提供、`pkg-config libgpiod` でリンク）。ランタイム
+  `libgpiod3` と CLI `gpiod`（`gpioinfo`/`gpioget`）は導入済みのことが多い。
+- **Python**: `python3-libgpiod`（`import gpiod` が v2 API）。導入済みのことが多い。
+- **Rust**: `rppal` クレート（GPIO/I2C/SPI/PWM を単一クレートで網羅）。`cargo` が crates.io から取得する
+  ため追加の apt は不要（ビルド時にネットワークが必要）。
+
+> **I2C/SPI の有効化（周辺デバイス使用時）**: 既定では GPIO ヘッダの I2C(`/dev/i2c-1`)・SPI(`/dev/spidev*`)
+> は無効。`/boot/firmware/config.txt` の `dtparam=i2c_arm=on` / `dtparam=spi=on` を有効化して再起動する。
+> GPIO のみ（LED 等）を使う場合は不要。
+
 ## 補足
 
 - **sudo**: passwordless sudo 前提で apt を非対話実行している。パスワードが必要な環境では

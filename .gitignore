@@ -2,3 +2,8 @@
 build/
 install/
 log/
+
+# host 側（コンテナ外）ビルド成果物
+host/rust/target/
+host/cpp/**/build/
+__pycache__/

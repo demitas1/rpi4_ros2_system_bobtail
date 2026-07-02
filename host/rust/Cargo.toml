@@ -1,0 +1,11 @@
+# ホスト側 Rust の仮想ワークスペース。
+# example → 本実装（bin/imu-reader, bin/disp-writer）→ 共通クレート（crates/shm-frames）
+# を段階的にメンバー追加していく。
+[workspace]
+resolver = "2"
+members = [
+    "examples/led_blink",
+    # "bin/imu-reader",     # 次フェーズ: docs/rpi4-mpu6050_imu_bridge_plan.md
+    # "bin/disp-writer",    # 次フェーズ: docs/rpi4-ssd1306_display__plan.md
+    # "crates/shm-frames",  # 次フェーズ: ImuFrame/DisplayFrame 共通定義
+]
