@@ -17,8 +17,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 
-using std::placeholders::_1;
-
 class BobtailSubscriber : public rclcpp::Node
 {
 public:
@@ -26,7 +24,8 @@ public:
   : Node("bobtail_subscriber_cpp")
   {
     subscription_ = this->create_subscription<std_msgs::msg::String>(
-      "topic", 10, std::bind(&BobtailSubscriber::listener_callback, this, _1));
+      "topic", 10,
+      [this](const std_msgs::msg::String & msg) { this->listener_callback(msg); });
   }
 
 private:
