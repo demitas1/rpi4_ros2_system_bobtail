@@ -19,6 +19,9 @@ services:
     restart: unless-stopped
     volumes:
       - /dev/shm:/dev/shm
+      # 表示共有 tmpfs（方式A/B 共通）: display_bridge が書き込み、ホスト側 disp-writer が読む。
+      # /run/disp-shm は uid 1000 所有で用意しておくこと（disp-writer.service の ExecStartPre 等）。
+      - /run/disp-shm:/disp-shm:rw
     environment:
       - ROS_DOMAIN_ID=42
     working_dir: /home/ros2_user/ros2_ws

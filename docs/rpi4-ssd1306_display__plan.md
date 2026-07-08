@@ -375,6 +375,48 @@ services:
 - 前回のIMU構成では`:ro`だったが、今回はコンテナ側が書き込み元なので`:rw`とする
 - ホスト側は開く際に`OpenOptions::new().read(true)`(書き込みフラグなし)としてオープンし、読み取り専用アクセスに徹する。ファイルシステムレベルのアクセス制御(パーミッション)まで厳密にしたい場合は、ホスト側プロセスのユーザーに書き込み権限を与えない設計にすることも検討可(運用上の複雑さと要件のバランスで判断)
 
+> **本リポジトリでの統合状況**: 上記 bind mount は既に `docker-compose.yml`（方式A）/
+> `docker-compose.prod.yml`（方式B）へ `-/run/disp-shm:/disp-shm:rw` として追加済み。
+> コンテナ側 ROS2 ノードの雛形は `src/display_bridge`(Python) / `src/display_bridge_cpp`(C++)。
+
+### 4.1 `/run/disp-shm` の所有者（uid 1000）設定 —— 必須
+
+`/run` は **root 所有の tmpfs**（再起動で消える）。何もしないと `/run/disp-shm` は存在しないか
+root 所有になる。コンテナ内 `ros2_user` は **uid 1000**、実機ホストの `demitas` も **uid 1000** なので、
+`/run/disp-shm` を **uid 1000 所有**にしておけば、コンテナ側 `display_bridge`（書込み）とホスト側
+`disp-writer`（読取り）の双方がアクセスできる。
+
+> **Docker の落とし穴**: bind mount 先が起動時に存在しないと Docker が **root:root で自動作成**し、
+> コンテナ内 uid 1000 が書けなくなる。**コンテナ起動前に uid 1000 所有で用意**しておくのが要点。
+
+**手順1（一回だけ・検証用）**:
+
+```bash
+# 実機(Pi)で。demitas は passwordless sudo 可。-o 1000 はコンテナ ros2_user の uid に合わせる
+sudo install -d -o 1000 -g 1000 -m 0775 /run/disp-shm
+ls -lnd /run/disp-shm     # → drwxrwxr-x ... 1000 1000
+```
+
+`host/scripts/run_disp_writer.sh` は起動時にこれと同等の処理をするため、disp-writer を先に起動する
+運用ならこの手順は自動で済む。
+
+**手順2（再起動後も自動・推奨。systemd-tmpfiles）**: `/run` 配下は tmpfiles.d で管理するのが定石。
+
+```bash
+echo 'd /run/disp-shm 0775 1000 1000 -' | sudo tee /etc/tmpfiles.d/disp-shm.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/disp-shm.conf   # 即時反映（再起動を待たず作成）
+ls -lnd /run/disp-shm
+```
+
+これで reboot 後も 1000:1000 で自動生成され、コンテナ／ホストどちらが先に起動しても書き込める。
+
+**確認**:
+
+```bash
+ls -lnd /run/disp-shm                      # 1000 1000 / drwxrwxr-x
+docker exec rpi4_ros2_system_bobtail_dev bash -lc 'touch /disp-shm/.w && echo OK && rm /disp-shm/.w'
+```
+
 ---
 
 ## 5. ホスト側実装(Rust)
@@ -693,13 +735,15 @@ Restart=on-failure
 RestartSec=1
 User=demitas
 SupplementaryGroups=i2c spi gpio
-ExecStartPre=/bin/mkdir -p /run/disp-shm
+# 注: /run は root 所有のため、User=demitas のままだと下記 mkdir は失敗する。
+#     '+' 付きは User 指定に関わらず root で実行される。§4.1 の tmpfiles.d を使うなら本行は不要。
+ExecStartPre=+/usr/bin/install -d -o 1000 -g 1000 -m 0775 /run/disp-shm
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-`/run/disp-shm`のディレクトリ自体は、コンテナ側の書き込みで自動生成される想定だが(3.2/3.3節で`create_directories`/`os.makedirs`実施済み)、ホスト側プロセスの起動タイミングがコンテナより先行する場合を考慮し、ホスト側でも`ExecStartPre`で作成しておく(どちらが先に起動しても問題ないようにする防御的設計)。`SupplementaryGroups`は`i2c`/`spi`/`gpio`をまとめて付与しておくことで、コンフィグの`interface`切り替えだけで再起動すれば動作する状態にしておく(実行ユーザーの権限起因のトラブルを避ける)。
+`/run/disp-shm`のディレクトリ自体は、コンテナ側の書き込みで自動生成される想定だが(3.2/3.3節で`create_directories`/`os.makedirs`実施済み)、ホスト側プロセスの起動タイミングがコンテナより先行する場合を考慮し、ホスト側でも作成しておく(どちらが先に起動しても問題ないようにする防御的設計)。ただし **`/run` は root 所有の tmpfs** なので、`User=demitas` で走る `ExecStartPre` から素の `mkdir` はできない —— `+` 付き（root 実行）で `install -d -o 1000` として所有者ごと作るか、より疎結合な **§4.1 の systemd-tmpfiles(`/etc/tmpfiles.d/disp-shm.conf`)** で用意して `ExecStartPre` を省く。uid 1000 はコンテナ `ros2_user` と実機 `demitas` に一致させるための値。`SupplementaryGroups`は`i2c`/`spi`/`gpio`をまとめて付与しておくことで、コンフィグの`interface`切り替えだけで再起動すれば動作する状態にしておく(実行ユーザーの権限起因のトラブルを避ける)。
 
 ---
 

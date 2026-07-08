@@ -14,6 +14,11 @@ services:
     shm_size: 1gb
     volumes:
       - /dev/shm:/dev/shm
+      # 表示共有 tmpfs: コンテナ側 ROS2 ノード(display_bridge)が書き込み、ホスト側 disp-writer が
+      # /run/disp-shm から読む（方式A: write-tmp→rename）。書き込み元なので :rw。
+      # 注: /run/disp-shm は uid 1000 所有で用意しておくこと（ros2_user=uid1000 が書けるように。
+      # host/scripts/run_disp_writer.sh や disp-writer.service の ExecStartPre が作成する）。
+      - /run/disp-shm:/disp-shm:rw
       # 本リポをワークスペースの src 配下にマウント（実機デプロイ時のレイアウトと一致）
       - .:/home/ros2_user/ros2_ws/src/rpi4_ros2_system_bobtail
       # ワークスペースを名前付きボリュームに永続化し、build/install/log を残して
