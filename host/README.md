@@ -56,11 +56,19 @@ tmpfs 上の固定長フレーム `DisplayFrame`(88B) を読んで SSD1306(128x6
 前提（実機）: `dtparam=i2c_arm=on`（＋`i2c_arm_baudrate=400000`）で I2C を有効化し、
 `i2cdetect -y 1` に `0x3C` が出ること。配線は SDA=BCM2(物理3) / SCL=BCM3(物理5) / VCC=3.3V / GND 共通。
 
+共有 tmpfs `/run/disp-shm` は **tmpfiles.d で用意する運用**（uid 1000 所有・再起動で自動再生成）。
+実機で一度だけ配置する（詳細は設計書 §4.1）:
+
+```bash
+sudo cp host/tmpfiles.d/disp-shm.conf /etc/tmpfiles.d/disp-shm.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/disp-shm.conf
+```
+
 ```bash
 # デプロイ＆ビルド（disp-writer もワークスペースの一部として一緒にビルドされる）
 host/scripts/deploy_and_build.sh
 
-# disp-writer を実機で起動（ssh -t。/run/disp-shm は自動作成。Ctrl-C で停止）
+# disp-writer を実機で起動（ssh -t。Ctrl-C で停止。tmpfiles.d 未導入時の保険で run スクリプトも dir を作る）
 host/scripts/run_disp_writer.sh
 #   config を渡す:  host/scripts/run_disp_writer.sh -- --config ~/host/rust/bin/disp-writer/config.example.toml
 
@@ -70,8 +78,9 @@ ssh rpi4-wifi 'python3 ~/host/scripts/gen_display_frame.py --state 1 --batt-v 12
 ssh rpi4-wifi 'python3 ~/host/scripts/gen_display_frame.py --loop'   # 値を変えながら追従確認
 ```
 
-将来コンテナ側 ROS2 ノード（`bobtail_display_bridge`）が `DisplayFrame` を書き込む構成に統合する。
-その場合 `gen_display_frame.py` は不要（検証用）。SPI 対応・systemd 常駐化は設計書 §5.9/§6 参照。
+コンテナ側 ROS2 ノード（`display_bridge` / `display_bridge_cpp`）が `DisplayFrame` を書き込む構成に
+統合する場合、bind mount 先 `/run/disp-shm` を上記 tmpfiles.d で先に用意しておくこと（root 所有で
+自動作成されると uid 1000 のコンテナが書けない）。SPI 対応・systemd 常駐化は設計書 §5.9/§6 参照。
 
 ## LED 点滅 example のビルド・実行（手動 / 実機ローカル）
 

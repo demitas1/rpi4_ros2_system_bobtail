@@ -400,15 +400,20 @@ ls -lnd /run/disp-shm     # → drwxrwxr-x ... 1000 1000
 `host/scripts/run_disp_writer.sh` は起動時にこれと同等の処理をするため、disp-writer を先に起動する
 運用ならこの手順は自動で済む。
 
-**手順2（再起動後も自動・推奨。systemd-tmpfiles）**: `/run` 配下は tmpfiles.d で管理するのが定石。
+**手順2（再起動後も自動。systemd-tmpfiles）— 本リポジトリの採用運用**: `/run` 配下は tmpfiles.d で
+管理するのが定石。設定ファイルは本リポに **`host/tmpfiles.d/disp-shm.conf`**（内容 `d /run/disp-shm
+0775 1000 1000 -`）として同梱済み。実機で一度だけ配置すれば、以降は毎起動時に自動生成される。
 
 ```bash
-echo 'd /run/disp-shm 0775 1000 1000 -' | sudo tee /etc/tmpfiles.d/disp-shm.conf
+sudo cp host/tmpfiles.d/disp-shm.conf /etc/tmpfiles.d/disp-shm.conf
 sudo systemd-tmpfiles --create /etc/tmpfiles.d/disp-shm.conf   # 即時反映（再起動を待たず作成）
 ls -lnd /run/disp-shm
 ```
 
 これで reboot 後も 1000:1000 で自動生成され、コンテナ／ホストどちらが先に起動しても書き込める。
+disp-writer を systemd 常駐化する場合も、service は tmpfiles.d の完了後に起動するよう
+`After=/Requires=systemd-tmpfiles-setup.service` を設定済み（§6）。手順1 は tmpfiles.d を入れる前の
+その場しのぎ用。
 
 **確認**:
 
@@ -735,15 +740,13 @@ Restart=on-failure
 RestartSec=1
 User=demitas
 SupplementaryGroups=i2c spi gpio
-# 注: /run は root 所有のため、User=demitas のままだと下記 mkdir は失敗する。
-#     '+' 付きは User 指定に関わらず root で実行される。§4.1 の tmpfiles.d を使うなら本行は不要。
-ExecStartPre=+/usr/bin/install -d -o 1000 -g 1000 -m 0775 /run/disp-shm
-
 [Install]
 WantedBy=multi-user.target
 ```
 
-`/run/disp-shm`のディレクトリ自体は、コンテナ側の書き込みで自動生成される想定だが(3.2/3.3節で`create_directories`/`os.makedirs`実施済み)、ホスト側プロセスの起動タイミングがコンテナより先行する場合を考慮し、ホスト側でも作成しておく(どちらが先に起動しても問題ないようにする防御的設計)。ただし **`/run` は root 所有の tmpfs** なので、`User=demitas` で走る `ExecStartPre` から素の `mkdir` はできない —— `+` 付き（root 実行）で `install -d -o 1000` として所有者ごと作るか、より疎結合な **§4.1 の systemd-tmpfiles(`/etc/tmpfiles.d/disp-shm.conf`)** で用意して `ExecStartPre` を省く。uid 1000 はコンテナ `ros2_user` と実機 `demitas` に一致させるための値。`SupplementaryGroups`は`i2c`/`spi`/`gpio`をまとめて付与しておくことで、コンフィグの`interface`切り替えだけで再起動すれば動作する状態にしておく(実行ユーザーの権限起因のトラブルを避ける)。
+> 上記は本リポ同梱の `host/rust/bin/disp-writer/disp-writer.service` と対応する。
+
+`/run/disp-shm`のディレクトリは **§4.1 の tmpfiles.d(`host/tmpfiles.d/disp-shm.conf`)** で用意する運用とし、service からは `ExecStartPre` を外した。代わりに `After=/Requires=systemd-tmpfiles-setup.service` を指定し、**tmpfiles によるディレクトリ生成が済んでから disp-writer が起動**するよう順序付けている（`/run` は root 所有 tmpfs のため `User=demitas` の `ExecStartPre` から素の `mkdir` はできない、という問題も tmpfiles.d 側で uid 1000 所有ごと作ることで回避）。コンテナ側 `display_bridge` も `os.makedirs`/`create_directories` を持つが、bind mount 先が先に root 所有で作られると書けなくなるため、いずれにせよ tmpfiles.d による事前用意が確実。`SupplementaryGroups`は`i2c`/`spi`/`gpio`をまとめて付与しておくことで、コンフィグの`interface`切り替えだけで再起動すれば動作する状態にしておく(実行ユーザーの権限起因のトラブルを避ける)。
 
 ---
 

@@ -1,16 +1,21 @@
 # disp-writer systemd unit（設計書 §6）。
 # 今回は参考物として同梱するのみ（enable しない）。常駐化する場合は:
+#   # /run/disp-shm は tmpfiles.d で用意する（下記 After= と整合。§4.1）
+#   sudo cp ../../../tmpfiles.d/disp-shm.conf /etc/tmpfiles.d/disp-shm.conf
+#   sudo systemd-tmpfiles --create /etc/tmpfiles.d/disp-shm.conf
 #   sudo cp disp-writer /usr/local/bin/
 #   sudo cp disp-writer.service /etc/systemd/system/
 #   sudo mkdir -p /etc/disp-writer && sudo cp config.example.toml /etc/disp-writer/config.toml
 #   sudo systemctl daemon-reload && sudo systemctl enable --now disp-writer
 [Unit]
 Description=SSD1306 Display Writer (bobtail host)
-After=local-fs.target
+# /run/disp-shm は tmpfiles.d(disp-shm.conf) が作る。その完了後に起動する。
+After=local-fs.target systemd-tmpfiles-setup.service
+Requires=systemd-tmpfiles-setup.service
 
 [Service]
 Type=simple
-ExecStartPre=/bin/mkdir -p /run/disp-shm
+# /run/disp-shm の作成は tmpfiles.d に委譲（ExecStartPre は不要）。
 ExecStart=/usr/local/bin/disp-writer --config /etc/disp-writer/config.toml
 Restart=on-failure
 RestartSec=1
