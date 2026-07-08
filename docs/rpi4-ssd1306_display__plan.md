@@ -740,18 +740,22 @@ WantedBy=multi-user.target
 
 ## 9. 実装タスク一覧(チェックリスト)
 
-- [ ] `DisplayFrame`構造体の最終フィールド確定(表示したい情報の洗い出し)
-- [ ] コンテナ側 ROS2ノード実装(C++ or Python選定)
-- [ ] write-tmp → rename 書き込みロジック実装(コンテナ側)
-- [ ] Dockerfile作成、`:rw`でのbind mount設定確認
-- [ ] `DisplayHandle` enumによるI2C/SPIアブストラクション設計の実装(5.2節)
-- [ ] ホスト側 `disp-writer` Rustプロジェクト作成、`rppal`(embedded-hal feature)でI2C初期化確認
-- [ ] `ssd1306` + `embedded-graphics`での描画確認(まずは固定文字列でOLED表示テスト、I2C版)
-- [ ] `i2c_arm_baudrate=400000`設定、フルフレーム転送時間の実測(I2C)
-- [ ] SPI版の配線・GPIO(DC/RES)接続、`display-interface-spi`での初期化確認
-- [ ] SPI版のフルフレーム転送時間の実測、I2C版との比較
-- [ ] `interface`コンフィグ切り替えによるI2C↔SPI動作確認(7.2節)
-- [ ] tmpfs読み取り + `seq`による重複描画スキップロジック実装
-- [ ] systemdサービスファイル作成、自動起動確認
-- [ ] 結合テスト(7章の検証計画に基づく)
+> 実装状況（本リポジトリ `host/rust/bin/disp-writer/`。I2C 版・ホスト側単体を先行実装）:
+> ホスト側 disp-writer（I2C）と検証用フレーム生成器 `host/scripts/gen_display_frame.py` を実装済み。
+> コンテナ側 ROS2 ブリッジ・SPI 版・systemd 常駐化は次フェーズ。
+
+- [x] `DisplayFrame`構造体の最終フィールド確定(表示したい情報の洗い出し) — §2.1 の 88B で確定、`host/rust/bin/disp-writer/src/frame.rs`
+- [ ] コンテナ側 ROS2ノード実装(C++ or Python選定) — 次フェーズ（`bobtail_display_bridge`）
+- [ ] write-tmp → rename 書き込みロジック実装(コンテナ側) — 次フェーズ（検証用に `gen_display_frame.py` で先行代替）
+- [ ] Dockerfile作成、`:rw`でのbind mount設定確認 — 次フェーズ
+- [x] `DisplayHandle` enumによるI2C/SPIアブストラクション設計の実装(5.2節) — I2C 単一 variant で実装（`display.rs`。SPI は seam のみ）
+- [x] ホスト側 `disp-writer` Rustプロジェクト作成、`rppal`(embedded-hal feature)でI2C初期化確認
+- [x] `ssd1306` + `embedded-graphics`での描画確認(まずは固定文字列でOLED表示テスト、I2C版)
+- [x] `i2c_arm_baudrate=400000`設定、フルフレーム転送時間の実測(I2C) — 設定済み、disp-writer が flush 時間をログ出力
+- [ ] SPI版の配線・GPIO(DC/RES)接続、`display-interface-spi`での初期化確認 — 次フェーズ（実機未配線）
+- [ ] SPI版のフルフレーム転送時間の実測、I2C版との比較 — 次フェーズ
+- [ ] `interface`コンフィグ切り替えによるI2C↔SPI動作確認(7.2節) — 次フェーズ
+- [x] tmpfs読み取り + `seq`による重複描画スキップロジック実装 — `main.rs`（last_seq 差分）
+- [~] systemdサービスファイル作成、自動起動確認 — unit 同梱(`disp-writer.service`)。enable は未実施
+- [ ] 結合テスト(7章の検証計画に基づく) — コンテナ側実装後
 - [ ] (オプション)鮮度チェック・"NO DATA"表示ロジックの追加検討

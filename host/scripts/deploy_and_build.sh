@@ -49,6 +49,7 @@ python3 -m py_compile ~/host/python/examples/led_blink.py && echo "py_compile OK
 
 echo "--- 生成物 ---"
 ls -l ~/host/rust/target/release/led_blink \
+      ~/host/rust/target/release/disp-writer \
       ~/host/cpp/build/examples/led_blink/led_blink
 REMOTE
 
@@ -58,5 +59,7 @@ cat <<EOF
     host/scripts/run_led_blink.sh rust   17 500
     host/scripts/run_led_blink.sh cpp    17 500
     host/scripts/run_led_blink.sh python 17 500
+    host/scripts/run_disp_writer.sh                 # SSD1306 OLED(I2C) 表示
+    (フレーム投入は実機で: python3 ~/host/scripts/gen_display_frame.py --loop)
     (対象ホスト変更: RPI_HOST=rpi4-eth host/scripts/run_led_blink.sh rust)
 EOF

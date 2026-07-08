@@ -1,0 +1,17 @@
+[package]
+name = "disp-writer"
+version = "0.1.0"
+edition = "2021"
+description = "tmpfs 上の DisplayFrame を読んで SSD1306 OLED(I2C) へ描画するホスト側バイナリ"
+
+[dependencies]
+# rppal: Pi の GPIO/I2C/SPI/PWM クレート。embedded-hal feature で embedded-hal 1.0 trait を実装し、
+# ssd1306 クレートへ I2c をそのまま渡せる（追加の変換レイヤ不要）。
+rppal = { version = "0.19", features = ["embedded-hal"] }
+ssd1306 = "0.9"                # SSD1306 ドライバ（BufferedGraphicsMode）
+display-interface-i2c = "0.5"  # ssd1306 が使う I2C インターフェイス型（enum で型名を明示するため直接依存）
+embedded-graphics = "0.8"      # テキスト/図形描画
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"                   # TOML config パース
+anyhow = "1"                   # エラーハンドリング
+bytemuck = { version = "1", features = ["derive"] }  # 固定長バイナリ ⇔ 構造体

@@ -1,0 +1,21 @@
+# disp-writer 設定サンプル（既定値と同一）。
+# 使う場合は /etc/disp-writer/config.toml に置くか、disp-writer --config <path> で指定する。
+# 未指定なら disp-writer は下記と同じ既定値で起動する。
+
+[display]
+interface = "i2c"        # "i2c" のみ対応（"spi" は次フェーズ）
+width = 128
+height = 64
+rotation = "Rotate0"     # Rotate0 / Rotate90 / Rotate180 / Rotate270
+
+[i2c]                     # interface = "i2c" の場合に使用
+bus = 1                   # /dev/i2c-1
+address = 0x3C            # SSD1306 デフォルト（0x3D の個体もあるため i2cdetect で要確認）
+baudrate_hz = 400000      # 参考値。実クロックは /boot/firmware/config.txt の i2c_arm_baudrate で決まる
+
+[timing]
+poll_interval_ms = 20     # tmpfs のポーリング間隔
+
+[input]
+shm_dir = "/run/disp-shm"
+filename = "display_latest.bin"

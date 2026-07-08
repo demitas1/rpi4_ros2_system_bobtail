@@ -13,8 +13,11 @@ colcon は `host/` を一切走査しない（`host/cpp/CMakeLists.txt` は `pro
 ```
 host/
 ├── rust/      Rust（rppal: GPIO/I2C/SPI/PWM を単一クレートで網羅）。仮想ワークスペース。
+│   ├── examples/led_blink/   GPIO LED 点滅 example
+│   └── bin/disp-writer/       SSD1306 OLED(I2C) 表示バイナリ（docs/rpi4-ssd1306_display__plan.md）
 ├── cpp/       C++（libgpiod v2 の C API）。トップレベル CMake で束ねる。
-└── python/    Python（gpiod v2 = python3-libgpiod）。
+├── python/    Python（gpiod v2 = python3-libgpiod）。
+└── scripts/   実機への定常デプロイ／実行スクリプト（下記）
 ```
 
 当面の主対象は Rust による実装（[`../docs/rpi4-mpu6050_imu_bridge_plan.md`](../docs/rpi4-mpu6050_imu_bridge_plan.md) /
@@ -43,6 +46,32 @@ host/scripts/run_led_blink.sh rust   17 500   # [cpp|rust|python] [GPIO] [周期
 host/scripts/run_led_blink.sh cpp    27 200
 host/scripts/run_led_blink.sh python
 ```
+
+## SSD1306 OLED 表示（disp-writer, I2C）
+
+tmpfs 上の固定長フレーム `DisplayFrame`(88B) を読んで SSD1306(128x64) に描画するホスト側 Rust
+バイナリ。設計は [`../docs/rpi4-ssd1306_display__plan.md`](../docs/rpi4-ssd1306_display__plan.md)。
+既定は I2C・アドレス `0x3C`・`/run/disp-shm/display_latest.bin`。
+
+前提（実機）: `dtparam=i2c_arm=on`（＋`i2c_arm_baudrate=400000`）で I2C を有効化し、
+`i2cdetect -y 1` に `0x3C` が出ること。配線は SDA=BCM2(物理3) / SCL=BCM3(物理5) / VCC=3.3V / GND 共通。
+
+```bash
+# デプロイ＆ビルド（disp-writer もワークスペースの一部として一緒にビルドされる）
+host/scripts/deploy_and_build.sh
+
+# disp-writer を実機で起動（ssh -t。/run/disp-shm は自動作成。Ctrl-C で停止）
+host/scripts/run_disp_writer.sh
+#   config を渡す:  host/scripts/run_disp_writer.sh -- --config ~/host/rust/bin/disp-writer/config.example.toml
+
+# 別シェルで検証用フレームを投入（コンテナ無しで表示確認できる）
+ssh rpi4-wifi 'python3 ~/host/scripts/gen_display_frame.py --state 1 --batt-v 12.3 --batt-pct 87 \
+    --lin 0.25 --ang -0.1 --line1 "hello bobtail"'
+ssh rpi4-wifi 'python3 ~/host/scripts/gen_display_frame.py --loop'   # 値を変えながら追従確認
+```
+
+将来コンテナ側 ROS2 ノード（`bobtail_display_bridge`）が `DisplayFrame` を書き込む構成に統合する。
+その場合 `gen_display_frame.py` は不要（検証用）。SPI 対応・systemd 常駐化は設計書 §5.9/§6 参照。
 
 ## LED 点滅 example のビルド・実行（手動 / 実機ローカル）
 
