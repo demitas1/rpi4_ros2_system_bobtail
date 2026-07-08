@@ -31,8 +31,11 @@ rpi4_ros2_system_bobtail/
 > （[`host/README.md`](host/README.md)）。ビルド環境は
 > [`docs/pi4_host_toolchain_setup.md`](docs/pi4_host_toolchain_setup.md) を参照。
 
-現在 `src/bobtail_pubsub`（talker/listener）を参照実装として同梱している。実ノードの
-追加に伴い順次差し替える。
+現在 `src/bobtail_pubsub`（Python / ament_python）と `src/bobtail_pubsub_cpp`
+（C++ / ament_cmake）を talker/listener の参照実装として同梱している。両者は同一トピック
+`topic`（`std_msgs/String`）を使い言語間で相互運用できる。実ノードの追加に伴い順次差し替える。
+C++ ノードの追加手順は [`docs/node_development_cpp.md`](docs/node_development_cpp.md)、
+Python 版は [`docs/node_development_python.md`](docs/node_development_python.md)。
 
 ## 対応ベースイメージ
 
@@ -58,6 +61,11 @@ docker compose exec dev bash
 #   colcon build && source install/setup.bash
 #   ros2 run bobtail_pubsub bobtail_talker
 ```
+
+> `host/` はコンテナ外（Pi ホスト）用のプログラムで colcon の対象外。`host/COLCON_IGNORE`
+> マーカーにより colcon は `host/` を走査しないので、上記の `colcon build`（無指定）で
+> `src/` 配下の ROS ノードのみがビルドされる。特定パッケージだけビルドするなら
+> `colcon build --packages-select bobtail_pubsub bobtail_pubsub_cpp`。
 
 ### 方式B: 本番配布（システムイメージを焼いて Pi が pull）
 

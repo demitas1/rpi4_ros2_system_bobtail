@@ -48,6 +48,9 @@ colcon build                             # 単一パッケージ: --packages-sel
 source install/setup.bash
 ```
 
+> `host/` は `COLCON_IGNORE` マーカーで colcon の走査対象外なので、無指定の `colcon build` でも
+> `src/` 配下の ROS ノードのみがビルドされる（`host/` はコンテナ外＝Pi ホスト用でビルド系統が別）。
+
 ### 4. 実行・確認
 
 ```bash

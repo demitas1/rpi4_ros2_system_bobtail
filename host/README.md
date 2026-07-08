@@ -2,8 +2,9 @@
 
 Raspberry Pi 4 の**ホスト OS 上で直接**（Docker/ROS2 コンテナを介さず）動くプログラム群。
 GPIO・I2C・SPI・PWM を直接操作する用途を対象とする。ROS2 の ament ワークスペース（`../src/`）
-とは**意図的に分離**しており、`host/` 配下には `package.xml` / `setup.py` を置かないため
-colcon は一切走査しない。
+とは**意図的に分離**している。`host/` 直下に `COLCON_IGNORE` マーカーを置いてあるため
+colcon は `host/` を一切走査しない（`host/cpp/CMakeLists.txt` は `project()` を持ち、これが
+無いと colcon-cmake が拾ってコンテナ内ビルドが libgpiod 不在で失敗する）。
 
 > ツールチェーン（gcc/g++/cmake/rust）の導入は [`../docs/pi4_host_toolchain_setup.md`](../docs/pi4_host_toolchain_setup.md) を参照。
 
